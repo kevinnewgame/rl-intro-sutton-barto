@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov  8 09:02:16 2024
+Created on Fri Nov  8 14:37:43 2024
 
 @author: ccw
 """
@@ -46,14 +46,36 @@ class AgentSimpleBandit:
             self.Q[a] += (r - self.Q[a]) / self.N[a]
 
 
-if __name__ == '__main__':
+def simple_bandit_algorithm(
+        env: gym.Env,
+        n_steps=1000,
+        alpha=None,
+        init_value=0,
+        eps=0.1,
+        ucb=False, c=1,
+        seed=12345,
+        ):
 
-    def run_steps(env, agent, n_step=1000):
-        env.reset(seed=seed)
-        for step in range(1, n_step + 1):
-            a = agent.get_action(step)
-            _, r, _, _, info = env.step(a)
-            agent.update(a, r)
+    res = {"reward": list(), "opt_act": list()}
+
+    agent = AgentSimpleBandit(
+        env, seed=seed * 2, eps=eps, alpha=alpha, init_value=init_value,
+        ucb=ucb, c=c)
+
+    env.reset(seed=seed)
+
+    for step in range(1, n_steps + 1):
+        a = agent.get_action(step)
+        _, r, _, _, info = env.step(a)
+        agent.update(a, r)
+
+        res["reward"].append(r)
+        res["opt_act"].append(a == info["best_arm"])
+
+    return res
+
+
+if __name__ == '__main__':
 
     gym.envs.registration.register(
         id="k-armed-testbed-v0",
@@ -63,11 +85,7 @@ if __name__ == '__main__':
 
     seed = 12345
 
-    agent = AgentSimpleBandit(env, seed=seed, eps=0.1)
-    run_steps(env, agent)
-
-    agent = AgentSimpleBandit(env, seed=seed, eps=0.1, alpha=0.1)
-    run_steps(env, agent)
-
-    agent = AgentSimpleBandit(env, seed=seed, ucb=True, c=2)
-    run_steps(env, agent)
+    res_1 = simple_bandit_algorithm(env, eps=0.1, seed=seed)
+    res_2 = simple_bandit_algorithm(env, eps=0.1, alpha=0.1, seed=seed)
+    res_3 = simple_bandit_algorithm(
+        env, eps=0.1, alpha=0.1, ucb=True, c=2, seed=seed)
