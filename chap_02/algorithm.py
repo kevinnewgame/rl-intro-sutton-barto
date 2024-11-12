@@ -55,15 +55,13 @@ def simple_bandit_algorithm(
         ucb=False, c=1,
         seed=12345,
         ):
-
     res = {"reward": list(), "opt_act": list()}
 
+    rng = np.random.default_rng(seed)
     agent = AgentSimpleBandit(
-        env, seed=seed * 2, eps=eps, alpha=alpha, init_value=init_value,
-        ucb=ucb, c=c)
-
-    env.reset(seed=seed)
-
+        env, seed=rng.integers(100000), eps=eps, alpha=alpha,
+        init_value=init_value, ucb=ucb, c=c)
+    env.reset(seed=rng.integers(100000))
     for step in range(1, n_steps + 1):
         a = agent.get_action(step)
         _, r, _, _, info = env.step(a)
@@ -71,21 +69,87 @@ def simple_bandit_algorithm(
 
         res["reward"].append(r)
         res["opt_act"].append(a == info["best_arm"])
+    return res
 
+
+class AgentGradientBandit:
+
+    def __init__(self, env: gym.Env, seed=None, alpha: float | None = None,
+                 baseline=True, stationary=True, alpha_1=0.1):
+        self.env = env
+        self.rng = np.random.default_rng(seed)
+        self.alpha = alpha
+        self.baseline = baseline
+        self.stationary = stationary
+        self.alpha_1 = alpha_1
+
+        self.R = 0  # baseline: mean of rewards
+        self.N = 0  # number of action being visited
+        self.H = np.zeros(env.action_space.n)
+
+    def _soft_max_dist(self):
+        exph = np.exp(self.H)
+        return exph / exph.sum()
+
+    def get_action(self):
+        pi = self._soft_max_dist()
+        return int(self.rng.choice(len(pi), p=pi))
+
+    def update(self, a, r):
+        self.N += 1
+        if self.N == 1:
+            self.R = r
+
+        # preference update
+        pi = self._soft_max_dist()
+        pi[a] -= 1
+        self.H += self.alpha * (r - (self.R if self.baseline else 0)) * -pi
+
+        # baseline update
+        if self.stationary:
+            self.R += (r - self.R) / self.N
+        else:
+            self.R += self.alpha_1 * (r - self.R)
+
+
+def gradient_bandit_algorithm(
+        env: gym.Env, n_steps=1000, alpha=None, baseline=True, stationary=True,
+        seed=12345,):
+    res = {"reward": list(), "opt_act": list()}
+
+    rng = np.random.default_rng(seed)
+    agent = AgentGradientBandit(
+        env, seed=rng.integers(100000), alpha=alpha, baseline=baseline,
+        stationary=stationary)
+    _, info = env.reset(seed=rng.integers(100000))
+    for step in range(1, n_steps + 1):
+        a = agent.get_action()
+        _, r, _, _, info = env.step(a)
+        agent.update(a, r)
+
+        res["reward"].append(r)
+        res["opt_act"].append(a == info["best_arm"])
     return res
 
 
 if __name__ == '__main__':
+    seed = 1233
 
     gym.envs.registration.register(
         id="k-armed-testbed-v0",
         entry_point="rl_intro_env.gymnasium_env.envs:KArmedTestbed",
         )
+
     env = gym.make('k-armed-testbed-v0', k=10)
-
-    seed = 12345
-
     res_1 = simple_bandit_algorithm(env, eps=0.1, seed=seed)
     res_2 = simple_bandit_algorithm(env, eps=0.1, alpha=0.1, seed=seed)
     res_3 = simple_bandit_algorithm(
         env, eps=0.1, alpha=0.1, ucb=True, c=2, seed=seed)
+
+    env = gym.make('k-armed-testbed-v0', k=4, loc=4, stationary=True)
+    res_4 = gradient_bandit_algorithm(
+        env, seed=seed, alpha=0.4, stationary=True, baseline=True)
+
+    env = gym.make('k-armed-testbed-v0', k=4, loc=4, stationary=False)
+    res_5 = gradient_bandit_algorithm(
+        env, seed=seed, alpha=0.4, stationary=False, baseline=True)
