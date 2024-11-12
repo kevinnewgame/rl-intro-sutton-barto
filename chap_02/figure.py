@@ -72,7 +72,7 @@ def exercise_2_5(seed=None):
               "$\\alpha=0.1$": {"alpha": 0.1}}
     data = experiment(env, simple_bandit_algorithm, params, seed=seed,
                       n_run=1000, n_steps=10000, nr_parallel_processes=6)
-    plot(data, "plots/exercise_2_5.png")
+    plot(data, "plots/exercise_2_05.png")
 
 
 def figure_2_3(seed=None):
@@ -96,10 +96,10 @@ def figure_2_4(seed=None):
 def figure_2_5(seed=None):
     env = gym.make('k-armed-testbed-v0', k=10, stationary=True, loc=4)
     params = {
-        "b $\\alpha=0.1$": {"baseline": True, "alpha": 0.1},
-        "b $\\alpha=0.4$": {"baseline": True, "alpha": 0.4},
-        "nb $\\alpha=0.1$": {"baseline": False, "alpha": 0.1},
-        "nb $\\alpha=0.4$": {"baseline": False, "alpha": 0.4},
+        "b $\\alpha=0.1$": {"baseline": True, "alpha_h": 0.1},
+        "b $\\alpha=0.4$": {"baseline": True, "alpha_h": 0.4},
+        "nb $\\alpha=0.1$": {"baseline": False, "alpha_h": 0.1},
+        "nb $\\alpha=0.4$": {"baseline": False, "alpha_h": 0.4},
         }
     data = experiment(env, gradient_bandit_algorithm, params, n_run=2000,
                       seed=seed, stationary=True)
@@ -172,8 +172,8 @@ def figure_2_6(out_path, seed=None, n_run=2000, nr_parallel_processes=6,
 
     for i, alpha in enumerate(alphas):
         seeds = rng.integers(100000, size=n_run)
-        # func params: env, n_steps, alpha, baseline, stationary, seed
-        params = [(env, n_steps, alpha, True, True, seed) for seed in seeds]
+        # func params: env, n_steps, alpha_h, baseline, stationary, alpha_r, seed
+        params = [(env, n_steps, alpha, True, True, None, seed) for seed in seeds]
         with Pool(processes=nr_parallel_processes) as pool:
             results = pool.starmap(gradient_bandit_algorithm, params)
 
@@ -204,78 +204,73 @@ def exercise_2_11(
 
     fig, ax = plt.subplots()
 
-    # # 1. epsilon-greedy
-    # epsilons = [2 ** p for p in range(-7, -1)]
-    # mean_rewards = np.empty(len(epsilons))
+    # 1. epsilon-greedy
+    epsilons = [2 ** p for p in range(-7, -1)]
+    mean_rewards = np.empty(len(epsilons))
 
-    # for i, eps in enumerate(epsilons):
-    #     # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
-    #     res = simple_bandit_algorithm(env, n_steps, None, 0, eps, False, 1, seed)
-    #     mean_rewards[i] = get_stat(res)
+    for i, eps in enumerate(epsilons):
+        # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
+        res = simple_bandit_algorithm(env, n_steps, None, 0, eps, False, 1, seed)
+        mean_rewards[i] = get_stat(res)
 
-    # ax.plot(epsilons, mean_rewards, c="red", lw=1)
+    ax.plot(epsilons, mean_rewards, c="red", lw=1)
 
-    # # 2. greedy with optimistic initialization
-    # init_values = [2 ** p for p in range(-2, 3)]
-    # mean_rewards = np.empty(len(init_values))
+    # 2. greedy with optimistic initialization
+    init_values = [2 ** p for p in range(-2, 3)]
+    mean_rewards = np.empty(len(init_values))
 
-    # for i, v in enumerate(init_values):
-    #     # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
-    #     res = simple_bandit_algorithm(env, n_steps, 0.1, v, 0, False, 1, seed)
-    #     mean_rewards[i] = get_stat(res)
+    for i, v in enumerate(init_values):
+        # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
+        res = simple_bandit_algorithm(env, n_steps, 0.1, v, 0, False, 1, seed)
+        mean_rewards[i] = get_stat(res)
 
-    # ax.plot(init_values, mean_rewards, c="black", lw=1)
+    ax.plot(init_values, mean_rewards, c="black", lw=1)
 
-    # # 3. UCB
-    # cs = [2 ** p for p in range(-4, 5)]
-    # mean_rewards = np.empty(len(cs))
+    # 3. UCB
+    cs = [2 ** p for p in range(-4, 5)]
+    mean_rewards = np.empty(len(cs))
 
-    # for i, c in enumerate(cs):
-    #     # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
-    #     res = simple_bandit_algorithm(env, n_steps, None, 0, 0, True, c, seed)
-    #     mean_rewards[i] = get_stat(res)
+    for i, c in enumerate(cs):
+        # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
+        res = simple_bandit_algorithm(env, n_steps, None, 0, 0, True, c, seed)
+        mean_rewards[i] = get_stat(res)
 
-    # ax.plot(cs, mean_rewards, c="blue", lw=1)
+    ax.plot(cs, mean_rewards, c="blue", lw=1)
 
     # 4. gradient bandit
     alphas = [2 ** p for p in range(-5, 3)]
     mean_rewards = np.empty(len(alphas))
 
     for i, alpha in enumerate(alphas):
-        # func params: env, n_steps, alpha, baseline, stationary, seed
-        res = gradient_bandit_algorithm(env, n_steps, alpha, True, False, seed)
+        # func params: env, n_steps, alpha_h, baseline, stationary, alpha_r, seed
+        res = gradient_bandit_algorithm(env, n_steps, alpha, True, True, None, seed)
         mean_rewards[i] = get_stat(res)
-
-        res_5 = gradient_bandit_algorithm(
-            env, seed=seed, alpha=0.4, stationary=False, baseline=True)
-
-    return alphas, mean_rewards
 
     ax.plot(alphas, mean_rewards, c="green", lw=1)
 
-    # # 5. constant step (alpha = 0.1) epsilon-greedy
-    # epsilons = [2 ** p for p in range(-7, -1)]
-    # mean_rewards = np.empty(len(epsilons))
+    # 5. constant step (alpha = 0.1) epsilon-greedy
+    epsilons = [2 ** p for p in range(-7, -1)]
+    mean_rewards = np.empty(len(epsilons))
 
-    # for i, eps in enumerate(epsilons):
-    #     # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
-    #     res = simple_bandit_algorithm(env, n_steps, 0.1, 0, eps, False, 1, seed)
-    #     mean_rewards[i] = get_stat(res)
+    for i, eps in enumerate(epsilons):
+        # func params: env, n_steps, alpha, init_value, eps, ucb, c, seed
+        res = simple_bandit_algorithm(env, n_steps, 0.1, 0, eps, False, 1, seed)
+        mean_rewards[i] = get_stat(res)
 
-    # ax.plot(epsilons, mean_rewards, c="orange", lw=1)
+    ax.plot(epsilons, mean_rewards, c="orange", lw=1)
 
-    # xticks = [2 ** p for p in range(-7, 3)]
-    # ax.set_xticks(xticks)
+    xticks = [2 ** p for p in range(-7, 3)]
+    ax.set_xticks(xticks)
     ax.set_xscale('log', base=2)
     ax.grid()
     plt.savefig(out_path, dpi=dpi)
 
 
 if __name__ == '__main__':
-    # figure_2_2(12345)
-    # exercise_2_5(12345)
-    # figure_2_3(12345)
-    # figure_2_4(12345)
-    # figure_2_5(12345)
-    # figure_2_6("plots/figure_2_6.png", seed=12345)
-    data = exercise_2_11("plots/exercise_2_11.png", seed=12345)
+    figure_2_2(12345)
+    exercise_2_5(12345)
+    figure_2_3(12345)
+    figure_2_4(12345)
+    figure_2_5(12345)
+    figure_2_6("plots/figure_2_6.png", seed=12345)
+    exercise_2_11("plots/exercise_2_11.png", seed=12345)

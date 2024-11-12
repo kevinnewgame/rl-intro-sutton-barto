@@ -74,14 +74,14 @@ def simple_bandit_algorithm(
 
 class AgentGradientBandit:
 
-    def __init__(self, env: gym.Env, seed=None, alpha: float | None = None,
-                 baseline=True, stationary=True, alpha_1=0.1):
+    def __init__(self, env: gym.Env, seed=None, alpha_h: float | None = None,
+                 baseline=True, stationary=True, alpha_r=0.1):
         self.env = env
         self.rng = np.random.default_rng(seed)
-        self.alpha = alpha
+        self.alpha = alpha_h
         self.baseline = baseline
         self.stationary = stationary
-        self.alpha_1 = alpha_1
+        self.alpha_r = alpha_r
 
         self.R = 0  # baseline: mean of rewards
         self.N = 0  # number of action being visited
@@ -109,18 +109,18 @@ class AgentGradientBandit:
         if self.stationary:
             self.R += (r - self.R) / self.N
         else:
-            self.R += self.alpha_1 * (r - self.R)
+            self.R += self.alpha_r * (r - self.R)
 
 
 def gradient_bandit_algorithm(
-        env: gym.Env, n_steps=1000, alpha=None, baseline=True, stationary=True,
-        seed=12345,):
+        env: gym.Env, n_steps=1000, alpha_h=0.1, baseline=True,
+        stationary=True, alpha_r=0.1, seed=12345,):
     res = {"reward": list(), "opt_act": list()}
 
     rng = np.random.default_rng(seed)
     agent = AgentGradientBandit(
-        env, seed=rng.integers(100000), alpha=alpha, baseline=baseline,
-        stationary=stationary)
+        env, seed=rng.integers(100000), alpha_h=alpha_h, baseline=baseline,
+        stationary=stationary, alpha_r=alpha_r)
     _, info = env.reset(seed=rng.integers(100000))
     for step in range(1, n_steps + 1):
         a = agent.get_action()
@@ -148,8 +148,10 @@ if __name__ == '__main__':
 
     env = gym.make('k-armed-testbed-v0', k=4, loc=4, stationary=True)
     res_4 = gradient_bandit_algorithm(
-        env, seed=seed, alpha=0.4, stationary=True, baseline=True)
+        env, seed=seed, alpha_h=0.4, stationary=True, baseline=True)
 
+    # !!! This setting has problem and not solved yet
     env = gym.make('k-armed-testbed-v0', k=4, loc=4, stationary=False)
     res_5 = gradient_bandit_algorithm(
-        env, seed=seed, alpha=0.4, stationary=False, baseline=True)
+        env, seed=seed, alpha_h=0.4, stationary=False, baseline=True,
+        alpha_r=0.1)
