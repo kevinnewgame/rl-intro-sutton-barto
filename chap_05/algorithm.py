@@ -5,8 +5,8 @@ Created on Thu Nov 14 13:10:30 2024
 @author: ccw
 """
 import numpy as np
-from copy import deepcopy
 from collections import defaultdict
+
 import gymnasium as gym
 
 
@@ -47,18 +47,18 @@ def generate_episode(
     return episode
 
 
-class FirstVisitMC:
+class AgentMC:
 
-    def __init__(self, env: gym.Env, gamma=1, seed=None):
+    def __init__(self, env: gym.Env, gamma=1):
         self.env = env
         self.V = defaultdict(lambda: 0)
-        self.N = defaultdict(lambda: 0)
-        self.rng = np.random.default_rng(seed)
+        self.Q = defaultdict(lambda: np.zeros(env.action_space.n))
+        self.N = None
         self.gamma = gamma
 
-    def policy_evaluation(self, policy: callable):
-        seed = self.rng.integers(100000)
-        episode = generate_episode(self.env, policy, seed)
+    def policy_evaluation(self, episode: Episode):
+        if not self.N:
+            self.N = defaultdict(lambda: 0)
         G = 0
         for t in reversed(range(len(episode) - 1)):  # T - 1, T - 2, ..., 0
             G = self.gamma * G + episode.r[t + 1]
@@ -67,26 +67,11 @@ class FirstVisitMC:
                 self.N[s] += 1
                 self.V[s] += (G - self.V[s]) / self.N[s]
 
-
-class MC_ES():
-    """Monte Carlo exploring start for policy iteration.
-    Should use environment with exploring start setting"""
-
-    def __init__(self, env: gym.Env, gamma=1, seed=None):
-        self.env = env
-        self.Q = defaultdict(lambda: np.zeros(env.action_space.n))
-        self.N = defaultdict(lambda: np.zeros(env.action_space.n))
-        self.rng = np.random.default_rng(seed)
-        self.gamma = gamma
-
-    def policy_iteration(self):
-        def policy(s):
-            return self.Q[s].argmax()
-
-        seed = self.rng.integers(100000)
-        episode = generate_episode(self.env, policy, seed, es=True)
+    def policy_iteration(self, episode: Episode):
+        if not self.N:
+            self.N = defaultdict(lambda: np.zeros(self.env.action_space.n))
         G = 0
-        for t in reversed(range(len(episode) - 1)):  # T - 1, T - 2, ..., 0
+        for t in reversed(range(len(episode) - 1)):
             G = self.gamma * G + episode.r[t + 1]
             (s, a) = (episode.s[t], episode.a[t])
             if (s, a) not in zip(episode.s[:t], episode.a[:t]):
@@ -94,33 +79,5 @@ class MC_ES():
                 self.Q[s][a] += (G - self.Q[s][a]) / self.N[s][a]
 
 
-class OffPiMC
-
-
 if __name__ == '__main__':
-    def policy(s):
-        agent_point = s[0]
-        return 1 if agent_point < 20 else 0
-
-    gym.envs.registration.register(
-        id="blackjack",
-        entry_point="rl_intro_env.gymnasium_env.envs:Blackjack",)
-
-    env = gym.make("blackjack")
-
-    rng = np.random.default_rng(123)
-    episodes = list()
-    for _ in range(10):
-        episode = generate_episode(env, policy, seed=int(rng.integers(100000)))
-        episodes.append(episode)
-
-    alg = FirstVisitMC(env, seed=123)
-    for _ in range(10):
-        alg.policy_evaluation(policy)
-        print(alg.V)
-
-    env = gym.make("blackjack", es=True)
-    alg = MC_ES(env, seed=123)
-    for _ in range(10):
-        alg.policy_iteration()
-        print(alg.Q)
+    ...
