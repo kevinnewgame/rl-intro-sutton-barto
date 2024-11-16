@@ -83,7 +83,7 @@ class MC_Off:
         return self.V
 
 
-def experiment_5_3(env, seed=None):
+def experiment(env, seed=None):
     n_episode = 10000
     state = (13, 1, 2)
     algs = [MC_Off(env, weighted=w, seed=seed) for w in (True, False)]
@@ -93,13 +93,13 @@ def experiment_5_3(env, seed=None):
     return vs
 
 
-def figure_5_3(out_path, seed=None, dpi=65, nr_parallel_processes=4):
+def plot(out_path, seed=None, dpi=65, nr_parallel_processes=4):
     n_run = 100
     v = -0.27726
     env = gym.make("blackjack", start=(13, 1, 2))
     rng = np.random.default_rng(seed)
     seeds = rng.integers(100000, size=n_run)
-    f = partial(experiment_5_3, env)
+    f = partial(experiment, env)
     with Pool(processes=nr_parallel_processes) as pool:
         results = pool.map(f, seeds)
     mse = np.power(np.stack(results) - v, 2).mean(axis=0)
@@ -117,4 +117,4 @@ def figure_5_3(out_path, seed=None, dpi=65, nr_parallel_processes=4):
 
 if __name__ == '__main__':
     # bj_state_prediction((13, 1, 2))
-    data = figure_5_3("plots/figure_5_3.png", seed=123)
+    data = plot("plots/figure_5_3.png", seed=123)

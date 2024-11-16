@@ -3,6 +3,8 @@
 Created on Fri Nov 15 16:41:28 2024
 
 @author: ccw
+
+Apply MC on policy for policy iteration to blackjack game for illustration
 """
 import numpy as np
 from tqdm import tqdm
